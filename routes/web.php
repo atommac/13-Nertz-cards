@@ -70,3 +70,7 @@ Route::get('/scorecard', function () {
 Route::get('/stats', function () {
     return view('stats');
 })->name('stats');
+
+Route::get('/test', function () {
+    return view('test');
+});
