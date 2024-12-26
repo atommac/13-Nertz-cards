@@ -70,15 +70,28 @@
     <!-- reCAPTCHA v3 Script -->
     <script src="https://www.google.com/recaptcha/api.js?render={{ config('services.recaptcha.site_key') }}"></script>
     <script>
-        document.getElementById('registration-form').addEventListener('submit', function(e) {
+        const form = document.getElementById('registration-form');
+        const submitHandler = function(e) {
             e.preventDefault();
             grecaptcha.ready(function() {
-                grecaptcha.execute('{{ config('services.recaptcha.site_key') }}', {action: 'register'})
-                    .then(function(token) {
-                        document.getElementById('recaptcha_token').value = token;
-                        document.getElementById('registration-form').submit();
-                    });
+                grecaptcha.execute('{{ config('services.recaptcha.site_key') }}', {
+                    action: 'register'
+                }).then(function(token) {
+                    // Set the token in the form
+                    document.getElementById('recaptcha_token').value = token;
+                    
+                    // Remove the submit event listener to prevent infinite loop
+                    form.removeEventListener('submit', submitHandler);
+                    
+                    // Submit the form
+                    form.submit();
+                }).catch(function(error) {
+                    console.error('reCAPTCHA error:', error);
+                    alert('An error occurred. Please try again.');
+                });
             });
-        });
+        };
+
+        form.addEventListener('submit', submitHandler);
     </script>
 </x-guest-layout>

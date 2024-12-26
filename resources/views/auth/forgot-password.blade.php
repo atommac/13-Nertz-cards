@@ -41,11 +41,32 @@
         document.getElementById('forgot-password-form').addEventListener('submit', function(e) {
             e.preventDefault();
             grecaptcha.ready(function() {
-                grecaptcha.execute('{{ config('services.recaptcha.site_key') }}', {action: 'forgot_password'})
-                    .then(function(token) {
-                        document.getElementById('recaptcha_token').value = token;
-                        document.getElementById('forgot-password-form').submit();
+                grecaptcha.execute('{{ config('services.recaptcha.site_key') }}', {
+                    action: 'forgot_password'
+                }).then(function(token) {
+                    // Verify token with backend
+                    fetch('/verify-recaptcha', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            token: token,
+                            action: 'forgot_password'
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('recaptcha_token').value = token;
+                            document.getElementById('forgot-password-form').submit();
+                        } else {
+                            alert('reCAPTCHA validation failed. Please try again.');
+                            location.reload();
+                        }
                     });
+                });
             });
         });
     </script>

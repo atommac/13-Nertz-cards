@@ -6,6 +6,8 @@ use App\Livewire\Scoreboard;
 use App\Livewire\Friends;
 use App\Models\FriendInvitation;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 Route::get('/', function () {
     return view('welcome');
@@ -74,3 +76,19 @@ Route::get('/stats', function () {
 Route::get('/test', function () {
     return view('test');
 });
+
+Route::post('/verify-recaptcha', function (Request $request) {
+    $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+        'secret' => config('services.recaptcha.secret_key'),
+        'response' => $request->token,
+    ]);
+
+    if ($response->successful()) {
+        $data = $response->json();
+        return response()->json([
+            'success' => $data['success'] && $data['score'] >= 0.5 && $data['action'] === $request->action
+        ]);
+    }
+
+    return response()->json(['success' => false]);
+})->middleware('throttle:6,1');
