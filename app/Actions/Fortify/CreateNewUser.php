@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 use Laravel\Jetstream\Jetstream;
+use Illuminate\Support\Facades\Http;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -24,12 +25,35 @@ class CreateNewUser implements CreatesNewUsers
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => $this->passwordRules(),
             'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
-        ])->validate();
+            'recaptcha_token' => ['required', 'string'],
+        ])->after(function ($validator) use ($input) {
+            if (!$this->validateReCaptcha($input['recaptcha_token'] ?? '')) {
+                $validator->errors()->add('recaptcha', 'Failed to validate reCAPTCHA.');
+            }
+        })->validateWithBag('register');
 
         return User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
         ]);
+    }
+
+    /**
+     * Validate the reCAPTCHA token.
+     */
+    protected function validateReCaptcha(string $token): bool
+    {
+        $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+            'secret' => config('services.recaptcha.secret_key'),
+            'response' => $token,
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            return $data['success'] && $data['score'] >= 0.5 && $data['action'] === 'register';
+        }
+
+        return false;
     }
 }

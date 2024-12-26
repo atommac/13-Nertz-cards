@@ -12,8 +12,9 @@
 
         <x-validation-errors class="mb-4" />
 
-        <form method="POST" action="{{ route('register') }}">
+        <form method="POST" action="{{ route('register') }}" id="registration-form">
             @csrf
+
             <div>
                 <x-label for="name" value="{{ __('Name') }}" />
                 <x-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
@@ -33,6 +34,9 @@
                 <x-label for="password_confirmation" value="{{ __('Confirm Password') }}" />
                 <x-input id="password_confirmation" class="block mt-1 w-full" type="password" name="password_confirmation" required autocomplete="new-password" />
             </div>
+
+            <!-- Hidden reCAPTCHA token field -->
+            <input type="hidden" name="recaptcha_token" id="recaptcha_token">
 
             @if (Laravel\Jetstream\Jetstream::hasTermsAndPrivacyPolicyFeature())
                 <div class="mt-4">
@@ -62,4 +66,19 @@
             </div>
         </form>
     </x-authentication-card>
+
+    <!-- reCAPTCHA v3 Script -->
+    <script src="https://www.google.com/recaptcha/api.js?render={{ config('services.recaptcha.site_key') }}"></script>
+    <script>
+        document.getElementById('registration-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            grecaptcha.ready(function() {
+                grecaptcha.execute('{{ config('services.recaptcha.site_key') }}', {action: 'register'})
+                    .then(function(token) {
+                        document.getElementById('recaptcha_token').value = token;
+                        document.getElementById('registration-form').submit();
+                    });
+            });
+        });
+    </script>
 </x-guest-layout>
